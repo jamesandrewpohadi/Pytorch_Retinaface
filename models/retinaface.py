@@ -6,12 +6,12 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 from models.net import MobileNetV1 as MobileNetV1
-from models.net import FPN as FPN
-from models.net import SSH as SSH
+from models.net import FPN, FPNLevel
+from models.net import SSH
 
 class HeadBasic(nn.Module):
     def __init__(self,inchannels=512,num_anchors=3,num_output=2):
-        super(ClassHead,self).__init__()
+        super(HeadBasic,self).__init__()
         self.num_anchors = num_anchors
         self.num_output = num_output
         self.conv1x1 = nn.Conv2d(inchannels,self.num_anchors*self.num_output,kernel_size=(1,1),stride=1,padding=0)
@@ -138,13 +138,12 @@ class RetinaFace(nn.Module):
         return output
 
 class SinvNet(nn.Module):
-    def __init__(self, cfg = None, phase = 'train',outputs=[4,2,10]):
+    def __init__(self, cfg = None, fpn_level=6,head=HeadBasic,outputs=[4,2,10]):
         """
         :param cfg:  Network related settings.
         :param phase: train or test.
         """
-        super(RetinaFace,self).__init__()
-        self.phase = phase
+        super(SinvNet,self).__init__()
         backbone = None
         if cfg['name'] == 'mobilenet0.25':
             backbone = MobileNetV1()
@@ -162,59 +161,27 @@ class SinvNet(nn.Module):
             backbone = models.resnet50(pretrained=cfg['pretrain'])
 
         self.body = _utils.IntermediateLayerGetter(backbone, cfg['return_layers'])
-        in_channels_stage2 = cfg['in_channel']
-        in_channels_list = [
-            in_channels_stage2 * 2,
-            in_channels_stage2 * 4,
-            in_channels_stage2 * 8,
-        ]
+        in_channels = cfg['in_channel']*2
         out_channels = cfg['out_channel']
-        self.fpn = FPN(in_channels_list,out_channels)
-        self.ssh1 = SSH(out_channels, out_channels)
-        self.ssh2 = SSH(out_channels, out_channels)
-        self.ssh3 = SSH(out_channels, out_channels)
+        self.downsample = nn.AvgPool2d(3, stride=2, padding=1)
+        self.fpn_level = fpn_level
+        self.fpn = FPNLevel(in_channels,out_channels,self.fpn_level)
+        self.ssh = SSH(out_channels, out_channels)
 
         self.Heads = nn.ModuleList()
-        self.ClassHead = self._make_class_head(fpn_num=3, inchannels=cfg['out_channel'])
-        self.BboxHead = self._make_bbox_head(fpn_num=3, inchannels=cfg['out_channel'])
-        self.LandmarkHead = self._make_landmark_head(fpn_num=3, inchannels=cfg['out_channel'])
-
-    def _make_class_head(self,fpn_num=3,inchannels=64,anchor_num=2):
-        classhead = nn.ModuleList()
-        for i in range(fpn_num):
-            classhead.append(ClassHead(inchannels,anchor_num))
-        return classhead
-    
-    def _make_bbox_head(self,fpn_num=3,inchannels=64,anchor_num=2):
-        bboxhead = nn.ModuleList()
-        for i in range(fpn_num):
-            bboxhead.append(BboxHead(inchannels,anchor_num))
-        return bboxhead
-
-    def _make_landmark_head(self,fpn_num=3,inchannels=64,anchor_num=2):
-        landmarkhead = nn.ModuleList()
-        for i in range(fpn_num):
-            landmarkhead.append(LandmarkHead(inchannels,anchor_num))
-        return landmarkhead
+        for num_output in outputs:
+            self.Heads.append(head(inchannels=out_channels,num_anchors=2,num_output=num_output))
 
     def forward(self,inputs):
-        out = self.body(inputs)
-
+        out = list(self.body(inputs).values())
+        for i in range(1,self.fpn_level):
+            out.append(self.downsample(out[-1]))
+            
         # FPN
         fpn = self.fpn(out)
 
         # SSH
-        feature1 = self.ssh1(fpn[0])
-        feature2 = self.ssh2(fpn[1])
-        feature3 = self.ssh3(fpn[2])
-        features = [feature1, feature2, feature3]
+        features = [self.ssh(fpn[i]) for i in range(self.fpn_level)]
 
-        bbox_regressions = torch.cat([self.BboxHead[i](feature) for i, feature in enumerate(features)], dim=1)
-        classifications = torch.cat([self.ClassHead[i](feature) for i, feature in enumerate(features)],dim=1)
-        ldm_regressions = torch.cat([self.LandmarkHead[i](feature) for i, feature in enumerate(features)], dim=1)
-
-        if self.phase == 'train':
-            output = (bbox_regressions, classifications, ldm_regressions)
-        else:
-            output = (bbox_regressions, F.softmax(classifications, dim=-1), ldm_regressions)
+        output = list(torch.cat([head(feature) for feature in features], dim=1) for head in self.Heads)
         return output

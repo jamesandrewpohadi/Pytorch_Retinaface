@@ -97,6 +97,28 @@ class FPN(nn.Module):
         out = [output1, output2, output3]
         return out
 
+class FPNLevel(nn.Module):
+    def __init__(self,in_channels,out_channels,fpn_level):
+        super(FPNLevel,self).__init__()
+        leaky = 0
+        if (out_channels <= 64):
+            leaky = 0.1
+        self.fpn_level = fpn_level
+        self.output = conv_bn1X1(in_channels, out_channels, stride = 1, leaky = leaky)
+        self.merge = conv_bn(out_channels, out_channels, leaky = leaky)
+
+    def forward(self, inputs):
+        outputs = [self.output(inputs[i]) for i in range(self.fpn_level)][::-1]
+        out = [outputs[0]]
+
+        for i in range(self.fpn_level):
+            up = F.interpolate(out[-1], size=[outputs[i].size(2), outputs[i].size(3)], mode="nearest")
+            output = outputs[i] + up
+            output = self.merge(output)
+            out.append(output)
+
+        out = out[::-1]
+        return out
 
 
 class MobileNetV1(nn.Module):

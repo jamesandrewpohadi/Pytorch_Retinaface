@@ -11,7 +11,8 @@ from layers.functions.prior_box import PriorBox
 import time
 import datetime
 import math
-from models.retinaface import RetinaFace
+from models.retinaface import SinvNet
+from telegram import Bot
 
 parser = argparse.ArgumentParser(description='Retinaface Training')
 parser.add_argument('--training_dataset', default='./data/widerface/train/label.txt', help='Training dataset directory')
@@ -26,6 +27,12 @@ parser.add_argument('--gamma', default=0.1, type=float, help='Gamma update for S
 parser.add_argument('--save_folder', default='./weights/', help='Location to save checkpoint models')
 
 args = parser.parse_args()
+
+bot = Bot('1046825945:AAF0dseXhi-ytJHNXTUAh7tbKzTakUL2BXM')
+
+def printb(m):
+    print(m)
+    bot.sendMessage(385563671,m)
 
 if not os.path.exists(args.save_folder):
     os.mkdir(args.save_folder)
@@ -51,7 +58,7 @@ gamma = args.gamma
 training_dataset = args.training_dataset
 save_folder = args.save_folder
 
-net = RetinaFace(cfg=cfg)
+net = SinvNet(cfg=cfg)
 print("Printing net...")
 print(net)
 
@@ -105,12 +112,16 @@ def train():
         start_iter = 0
 
     for iteration in range(start_iter, max_iter):
-        if iteration % epoch_size == 0:
+        if iteration % epoch_size == 0 or iteration==1500:
             # create batch iterator
             batch_iterator = iter(data.DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate))
             if (epoch % 10 == 0 and epoch > 0) or (epoch % 5 == 0 and epoch > cfg['decay1']):
-                torch.save(net.state_dict(), save_folder + cfg['name']+ '_epoch_' + str(epoch) + '.pth')
-            epoch += 1
+                print('Epoch:{}/{} || Epochiter: {}/{} || Iter: {}/{} || Loc: {:.4f} Cla: {:.4f} Landm: {:.4f} || LR: {:.8f} || Batchtime: {:.4f} s || ETA: {}'
+                    .format(epoch, max_epoch, (iteration % epoch_size) + 1,
+                    epoch_size, iteration + 1, max_iter, loss_l.item(), loss_c.item(), loss_landm.item(), lr, batch_time, str(datetime.timedelta(seconds=eta))))
+            if iteration % epoch_size == 0:
+                epoch += 1
+                torch.save(net.state_dict(), save_folder + 'SinvNet_' + cfg['name']+ '_epoch_' + str(epoch) + '.pth')
 
         load_t0 = time.time()
         if iteration in stepvalues:
@@ -134,11 +145,8 @@ def train():
         load_t1 = time.time()
         batch_time = load_t1 - load_t0
         eta = int(batch_time * (max_iter - iteration))
-        print('Epoch:{}/{} || Epochiter: {}/{} || Iter: {}/{} || Loc: {:.4f} Cla: {:.4f} Landm: {:.4f} || LR: {:.8f} || Batchtime: {:.4f} s || ETA: {}'
-              .format(epoch, max_epoch, (iteration % epoch_size) + 1,
-              epoch_size, iteration + 1, max_iter, loss_l.item(), loss_c.item(), loss_landm.item(), lr, batch_time, str(datetime.timedelta(seconds=eta))))
 
-    torch.save(net.state_dict(), save_folder + cfg['name'] + '_Final.pth')
+    torch.save(net.state_dict(), save_folder + 'SinvNet_' + cfg['name'] + '_Final.pth')
     # torch.save(net.state_dict(), save_folder + 'Final_Retinaface.pth')
 
 
