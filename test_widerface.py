@@ -110,8 +110,8 @@ if __name__ == '__main__':
         # prevent bigger axis from being more than max_size:
         if np.round(resize * im_size_max) > max_size:
             resize = float(max_size) / float(im_size_max)
-        if args.origin_size:
-            resize = 1
+        # if args.origin_size:
+        #     resize = 1
 
         if resize != 1:
             img = cv2.resize(img, None, None, fx=resize, fy=resize, interpolation=cv2.INTER_LINEAR)

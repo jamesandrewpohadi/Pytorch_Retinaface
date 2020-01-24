@@ -1,3 +1,4 @@
 data/widerface
 weights
 **/__pycache__
+*.mp4
