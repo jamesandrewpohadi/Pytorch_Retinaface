@@ -7,9 +7,9 @@ import torch
 
 cfg = cfg_re50
 model = SinvNet(cfg=cfg)
-load_model(model,'weights/SinvNet_Resnet50_epoch_28.pth')
+load_model(model,'weights/SinvNet_Resnet50_epoch_7.pth')
 model.eval()
-model = model.to(torch.device('cpu'))
+model = model.to(torch.device('cuda'))
 print('finished loading model!')
  
 # Create a VideoCapture object and read from input file
@@ -28,7 +28,7 @@ while(cap.isOpened()):
  
     # Display the resulting frame
     
-    dets = detect(model,frame,cfg,(100,300))
+    dets = detect(model,frame,cfg,(200,400))
     for b in dets:
         text = "{:.4f}".format(b[4])
         b = list(map(int, b))

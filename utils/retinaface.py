@@ -43,7 +43,7 @@ def load_model(model, pretrained_path, load_to_cpu=False):
 def detect(net,img,cfg,size=(200,400),confidence_threshold=0.2,nms_threshold=0.4):
     # testing scale
     img = np.float32(img)
-    device=torch.device('cpu')
+    device=torch.device('cuda')
     target_size = size[0]
     max_size = size[1]
     im_shape = img.shape

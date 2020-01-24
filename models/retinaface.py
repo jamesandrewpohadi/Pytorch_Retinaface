@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from collections import OrderedDict
 
 from models.net import MobileNetV1 as MobileNetV1
-from models.net import FPN, FPNLevel, SSHLight, conv_bn1X1
+from models.net import FPN, FPNLevel, SSH, conv_bn1X1
 
 class HeadBasic(nn.Module):
     def __init__(self,inchannels=512,num_anchors=3,num_output=2):
@@ -137,7 +137,7 @@ class RetinaFace(nn.Module):
         return output
 
 class SinvNet(nn.Module):
-    def __init__(self, cfg = None, fpn_level=6,head=HeadBasic,outputs=[4,2,10]):
+    def __init__(self, cfg = None, fpn_level=5,head=HeadBasic,outputs=[4,2,10]):
         """
         :param cfg:  Network related settings.
         :param phase: train or test.
@@ -165,17 +165,18 @@ class SinvNet(nn.Module):
         self.downsample = nn.AvgPool2d(3, stride=2, padding=1)
         self.conv = conv_bn1X1(in_channels, out_channels, stride = 1, leaky = 0)
         self.fpn_level = fpn_level
-        self.ssh = SSHLight(out_channels, out_channels)
+        self.ssh = SSH(out_channels, out_channels)
 
         self.Heads = nn.ModuleList()
         for num_output in outputs:
             self.Heads.append(head(inchannels=out_channels,num_anchors=2,num_output=num_output))
 
     def forward(self,inputs):
-        body = self.body(inputs)[1]
-        down = [self.conv(body)]
+        downs = [inputs]
         for i in range(1,self.fpn_level):
-            down.append(self.downsample(down[-1]))
+            downs.append(self.downsample(downs[-1]))
+        downs = [self.body(d)[1] for d in downs]
+        down = [self.conv(d) for d in downs]
 
         # SSH
         features = [self.ssh(down[i]) for i in range(self.fpn_level)]
