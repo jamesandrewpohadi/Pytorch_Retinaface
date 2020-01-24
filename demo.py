@@ -7,7 +7,7 @@ import torch
 
 cfg = cfg_re50
 model = SinvNet(cfg=cfg)
-load_model(model,'weights/SinvNet_Resnet50_epoch_7.pth')
+load_model(model,'weights/SinvNet_Resnet50_epoch_86.pth')
 model.eval()
 model = model.to(torch.device('cuda'))
 print('finished loading model!')
@@ -28,7 +28,7 @@ while(cap.isOpened()):
  
     # Display the resulting frame
     
-    dets = detect(model,frame,cfg,(200,400))
+    dets = detect(model,frame,cfg,(150,400))
     for b in dets:
         text = "{:.4f}".format(b[4])
         b = list(map(int, b))
