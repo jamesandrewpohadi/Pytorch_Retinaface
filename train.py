@@ -103,7 +103,7 @@ def train():
     epoch_size = math.ceil(len(dataset) / batch_size)
     max_iter = max_epoch * epoch_size
 
-    stepvalues = (cfg['decay1'] * epoch_size, cfg['decay2'] * epoch_size)
+    stepvalues = (10 * epoch_size, 20 * epoch_size, 30 * epoch_size)
     step_index = 0
 
     if args.resume_epoch > 0:
