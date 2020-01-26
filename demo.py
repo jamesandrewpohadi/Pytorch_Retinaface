@@ -6,15 +6,17 @@ import numpy as np
 import torch
 
 cfg = cfg_re50
-model = SinvNet(cfg=cfg)
-load_model(model,'weights/SinvNet_Resnet50_epoch_86.pth')
+cfg['min_sizes']= [[12, 16],[24, 32],[48, 64],[96, 128],[192, 256],[256,512]]
+cfg['steps'] = [8, 16, 32,64,128,256]
+model = SinvNet(cfg=cfg,fpn_level=6)
+load_model(model,'weights/SinvNet_Resnet50_epoch_17.pth')
 model.eval()
 model = model.to(torch.device('cuda'))
 print('finished loading model!')
  
 # Create a VideoCapture object and read from input file
 # If the input is the camera, pass 0 instead of the video file name
-cap = cv2.VideoCapture('rcc.mp4')
+cap = cv2.VideoCapture(0)
  
 # Check if camera opened successfully
 if (cap.isOpened()== False): 
@@ -28,7 +30,7 @@ while(cap.isOpened()):
  
     # Display the resulting frame
     
-    dets = detect(model,frame,cfg,(150,400))
+    dets = detect(model,frame,cfg,(200,400))
     for b in dets:
         text = "{:.4f}".format(b[4])
         b = list(map(int, b))

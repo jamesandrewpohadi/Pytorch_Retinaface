@@ -167,6 +167,7 @@ class SinvNet(nn.Module):
         self.fpn_level = fpn_level
         self.fpn = FPNLevel(out_channels,fpn_level)
         self.ssh = SSHLight(out_channels, out_channels)
+        self.dropout = nn.Dropout(p=0.3)
 
         self.Heads = nn.ModuleList()
         for num_output in outputs:
@@ -178,6 +179,7 @@ class SinvNet(nn.Module):
             downs.append(self.downsample(downs[-1]))
         downs = [self.body(d)[1] for d in downs]
         down = [self.conv(d) for d in downs]
+        down = [self.dropout(d) for d in down]
 
         # SSH
         features = [self.ssh(down[i]) for i in range(self.fpn_level)]

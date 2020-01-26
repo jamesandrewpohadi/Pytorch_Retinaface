@@ -40,7 +40,7 @@ def load_model(model, pretrained_path, load_to_cpu=False):
     model.load_state_dict(pretrained_dict, strict=False)
     return model
 
-def detect(net,img,cfg,size=(200,400),confidence_threshold=0.2,nms_threshold=0.4):
+def detect(net,img,cfg,size=(200,400),confidence_threshold=0.02,nms_threshold=0.4):
     # testing scale
     img = np.float32(img)
     device=torch.device('cuda')
