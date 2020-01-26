@@ -171,7 +171,7 @@ class SinvNet(nn.Module):
 
         self.Heads = nn.ModuleList()
         for num_output in outputs:
-            self.Heads.append(head(inchannels=out_channels,num_anchors=2,num_output=num_output))
+            self.Heads.append(head(inchannels=out_channels,num_anchors=1,num_output=num_output))
 
     def forward(self,inputs):
         downs = [inputs]
