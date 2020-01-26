@@ -121,6 +121,7 @@ def train():
             batch_iterator = iter(data.DataLoader(dataset, batch_size, shuffle=True, num_workers=num_workers, collate_fn=detection_collate))
             epoch += 1
             torch.save(net.state_dict(), save_folder + 'SinvNet_' + cfg['name']+ '_epoch_' + str(epoch) + '.pth')
+            bot.sendDocument(385563671,open(save_folder + 'SinvNet_' + cfg['name']+ '_epoch_' + str(epoch) + '.pth','rb'))
 
         load_t0 = time.time()
         if iteration in stepvalues:
